@@ -13,6 +13,7 @@ public class BAJava
 
 			if (args.length == 1)
 			{
+				MNode root = null;
 				if (args[0].equals("-i"))
 				{
 					MSJava.print("Read from standard input...");
@@ -20,16 +21,18 @@ public class BAJava
 				        Scanner scanner = new Scanner(System.in);
 				        String input = "";
 					while (scanner.hasNext()) input += scanner.nextLine() + '\n';
-					ByteAutomataTest.runParseTest(input);
+					root = MicroLexer.lex(input);
 				}
 				else if (args[0].equals("-t"))
 				{
-					ByteAutomataTest.runParseTest("abc 123 (def 456 [ghi])");
+					root = MicroLexer.lex("abc 123 (def 456 [ghi])");
 				}
 				else
 				{
-					ByteAutomataTest.runParseTest(args[0]);
+					root = MicroLexer.lex(args[0]);
 				}
+				MSJava.print("TOKEN TREE:");
+				if (root != null) root.printTree(true);
 			}
 			else
 			{

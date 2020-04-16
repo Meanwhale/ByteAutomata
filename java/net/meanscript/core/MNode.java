@@ -31,11 +31,11 @@ public void printTree (boolean deep) throws MException
 }
 public void printTree (MNode _node, int depth, boolean deep) throws MException
 {
- MSJava.assertion(_node != null, "printTree: empty node");
+ MSJava.assertion(_node != null, "<printTree: empty node>");
  MNode node = _node;
  for (int i = 0; i < depth; i++) MSJava.verbosen("  ");
  MSJava.verbosen("[").print(node.data).print("]");
- if (node.numChildren > 0) { MSJava.verbosen(":").print(node.numChildren); }
+ // if (node.numChildren > 0) { VR(" + ")X(node.numChildren); }
  if (deep) MSJava.verbose("");
  if (node.child != null && deep) printTree(node.child, depth + 1, deep);
  if (node.next != null) printTree(node.next, depth, deep);
