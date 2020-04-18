@@ -1,15 +1,23 @@
-/*
- *
- *    Meanscript ByteAutomata (c) 2020, Meanwhale
- *
- *    GitHub page:     https://github.com/Meanwhale/ByteAutomata
- *    Email:           meanwhale@gmail.com
- *    Twitter:         https://twitter.com/TheMeanwhale
- *
- */
 package net.meanscript;
 import net.meanscript.core.*;
 import net.meanscript.java.*;
+/*
+
+ *
+
+ *    Meanscript ByteAutomata (c) 2020, Meanwhale
+
+ *
+
+ *    GitHub page:     https://github.com/Meanwhale/ByteAutomata
+
+ *    Email:           meanwhale@gmail.com
+
+ *    Twitter:         https://twitter.com/TheMeanwhale
+
+ *
+
+ */
 public abstract class MInputStream {
 public MInputStream ()
 {

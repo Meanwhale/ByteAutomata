@@ -1,6 +1,8 @@
 #include "../main.hpp" 
 namespace meanscript { 
-int32_t MAX_STATES = 32;
+constexpr int32_t MAX_STATES = 32;
+constexpr int32_t BUFFER_SIZE = 512;
+constexpr int32_t CFG_MAX_NAME_LENGTH = 128;
 ByteAutomata::ByteAutomata()
 {
  ok = true;
@@ -10,6 +12,13 @@ ByteAutomata::ByteAutomata()
  actionCounter = 0;
  tr.reset(MAX_STATES * 256);
  for (int32_t i=0; i<MAX_STATES * 256; i++) tr[i] = (uint8_t)0xff;
+ inputByte = 0;
+ index = 0;
+ lineNumber = 0;
+ stayNextStep = false;
+ running = false;
+ buffer.reset(BUFFER_SIZE);
+ tmp.reset(BUFFER_SIZE);
 }
 ByteAutomata::~ByteAutomata() { }
 void ByteAutomata::print ()
@@ -88,40 +97,22 @@ bool ByteAutomata::step (uint8_t input)
  act();
  return true;
 }
-const char * letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const char * numbers = "1234567890";
-const char * whitestateSpace = " \t\n\r";
-const char * linebreak = "\n\r";
-const char * expressionBreak = ",;";
-const char * blockStart = "([{";
-const char * blockEnd = ")]}";
-constexpr int32_t BUFFER_SIZE = 512;
-constexpr int32_t CFG_MAX_NAME_LENGTH = 128;
-Array<uint8_t> tmp(BUFFER_SIZE);
-Array<uint8_t> buffer(BUFFER_SIZE);
-uint8_t stateSpace, stateName, stateNumber;
-ByteAutomata* automata;
-bool stayNextStep, running;
-int32_t index, lastStart;
-uint8_t inputByte = 0;
-MNode* root;
-MNode* currentBlock;
-MNode* currentExpr;
-MNode* currentToken;
-void next(uint8_t state)
+int32_t ByteAutomata::getIndex ()
 {
- lastStart = index;
- (*automata).next(state);
+ return index;
 }
-void stay()
+int32_t ByteAutomata::getInputByte ()
 {
- ASSERT(!stayNextStep, "can't go backwards twice");
+ return inputByte;
+}
+void ByteAutomata::stay ()
+{
+ // same input byte on next step
+ ASSERT(!stayNextStep, "'stay' is called twice");
  stayNextStep = true;
 }
-std::string getNewName()
+std::string ByteAutomata::getString (int32_t start, int32_t length)
 {
- int32_t start = lastStart;
- int32_t length = index - start;
  {if (!(length < CFG_MAX_NAME_LENGTH)) EXIT("name is too long")};
  int32_t i = 0;
  for (; i < length; i++)
@@ -130,6 +121,71 @@ std::string getNewName()
  }
  tmp[i] = '\0';
  return std::string((char*)tmp.get());
+}
+void ByteAutomata::run (MInputStream & input)
+{
+ inputByte = 0;
+ index = 0;
+ lineNumber = 1;
+ stayNextStep = false;
+ running = true;
+ while ((!input.end() || stayNextStep) && running && ok)
+ {
+  if (!stayNextStep)
+  {
+   index ++;
+   inputByte = input.readByte();
+   buffer[index % BUFFER_SIZE] = inputByte;
+   if (inputByte == '\n') lineNumber++;
+  }
+  else
+  {
+   stayNextStep = false;
+  }
+  std::cout<<("[ ")<<((char)(inputByte))<<(" ]")<<std::endl;
+  running = step(inputByte);
+ }
+ if (!stayNextStep) index++;
+}
+void ByteAutomata::printError ()
+{
+ std::cout<<("ERROR: parser state [")<<(stateNames[(int32_t)currentState])<<("]")<<std::endl;
+ std::cout<<("Line ")<<(lineNumber)<<(": \"");
+ // print nearby code
+ int32_t start = index-1;
+ while (start > 0 && index - start < BUFFER_SIZE && (char)buffer[start % BUFFER_SIZE] != '\n')
+ {
+  start --;
+ }
+ while (++start < index)
+ {
+  vrbout()<<((char)(buffer[start % BUFFER_SIZE]));
+ }
+ std::cout<<("\"")<<std::endl;
+}
+const char * letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const char * numbers = "1234567890";
+const char * whitestateSpace = " \t\n\r";
+const char * linebreak = "\n\r";
+const char * expressionBreak = ",;";
+const char * blockStart = "([{";
+const char * blockEnd = ")]}";
+uint8_t stateSpace, stateName, stateNumber;
+ByteAutomata* automata;
+int32_t lastStart;
+MNode* root;
+MNode* currentBlock;
+MNode* currentExpr;
+MNode* currentToken;
+void next(uint8_t state)
+{
+ // transition to a next state
+ lastStart = (*automata).getIndex();
+ (*automata).next(state);
+}
+void stay()
+{
+ (*automata).stay();
 }
 void addExpr()
 {
@@ -140,28 +196,14 @@ void addExpr()
 }
 void addToken(int32_t tokenType)
 {
- std::string data = getNewName();
+ std::string data = (*automata).getString(lastStart, (*automata).getIndex() - lastStart);
  vrbout()<<("NEW TOKEN: ")<<(data)<<std::endl;
  MNode* token = new MNode(currentExpr, tokenType, data);
  if (currentToken == 0) (*currentExpr).child = token;
  else (*currentToken).next = token;
  (*currentExpr).numChildren++;
  currentToken = token;
- lastStart = index;
-}
-void endBlock(int32_t blockType)
-{
- {if (!((currentBlock != 0))) EXIT("unexpected block end")};
- // Check that block-end character is the right one.
- // The 'type' is block start/end character's ASCII code.
- if ((*currentBlock).type == 40 ) {{if (!(blockType == 41)) EXIT("invalid block end; parenthesis was expected")}}
- else if ((*currentBlock).type == 91 ) {{if (!(blockType == 93)) EXIT("invalid block end; square bracket was expected")}}
- else if ((*currentBlock).type == 123) {{if (!(blockType == 125)) EXIT("invalid block end; curly bracket was expected")}}
- else { {if (!(false)) EXIT("unhandled block end: " << blockType)}; }
- lastStart = -1;
- currentToken = currentBlock;
- currentExpr = (*currentToken).parent;
- currentBlock = (*currentExpr).parent;
+ lastStart = (*automata).getIndex();
 }
 void exprBreak()
 {
@@ -175,21 +217,28 @@ void addBlock(int32_t blockType)
  lastStart = -1;
  std::string tmp123("<BLOCK>");
  MNode* block = new MNode(currentExpr, blockType, tmp123);
- if (currentToken == 0)
- {
-  (*currentExpr).child = block;
-  currentToken = block;
- }
- else
- {
-  (*currentToken).next = block;
- }
+ if (currentToken == 0) (*currentExpr).child = block;
+ else (*currentToken).next = block;
  (*currentExpr).numChildren++;
  currentBlock = block;
  MNode* expr = new MNode(currentBlock, 0, "<EXPR>");
  (*currentBlock).child = expr;
  currentExpr = expr;
  currentToken = 0;
+}
+void endBlock(int32_t blockType)
+{
+ {if (!((currentBlock != 0))) EXIT("unexpected block end")};
+ // Check that block-end character is the right one.
+ // The 'type' is block start/end character's ASCII code.
+ if ((*currentBlock).type == 40 ) {{if (!(blockType == 41)) EXIT("invalid block end; parenthesis was expected")};}
+ else if ((*currentBlock).type == 91 ) {{if (!(blockType == 93)) EXIT("invalid block end; square bracket was expected")};}
+ else if ((*currentBlock).type == 123) {{if (!(blockType == 125)) EXIT("invalid block end; curly bracket was expected")};}
+ else { {if (!(false)) EXIT("unhandled block end: " << blockType)}; }
+ lastStart = -1;
+ currentToken = currentBlock;
+ currentExpr = (*currentToken).parent;
+ currentBlock = (*currentExpr).parent;
 }
 void defineTransitions(ByteAutomata & ba)
 {
@@ -200,8 +249,8 @@ void defineTransitions(ByteAutomata & ba)
  ba.transition(stateSpace, letters, []() { next(stateName); });
  ba.transition(stateSpace, numbers, []() { next(stateNumber); });
  ba.transition(stateSpace, expressionBreak, []() { exprBreak(); });
- ba.transition(stateSpace, blockStart, []() { addBlock((int)inputByte);});
- ba.transition(stateSpace, blockEnd, []() { endBlock((int)inputByte);});
+ ba.transition(stateSpace, blockStart, []() { addBlock((int)(*automata).getInputByte());});
+ ba.transition(stateSpace, blockEnd, []() { endBlock((int)(*automata).getInputByte());});
  ba.transition(stateName, letters, 0);
  ba.transition(stateName, whitestateSpace, []() { addToken(0); next(stateSpace); });
  ba.transition(stateName, blockStart, []() { addToken(0); stay(); next(stateSpace); });
@@ -218,55 +267,22 @@ MNode* lexInput(MInputStream & input)
  ByteAutomata ba = ByteAutomata();
  automata = (&(ba));
  defineTransitions(ba);
- ba.next((uint8_t)1);
+ ba.next((uint8_t)1); // set first state
  root = new MNode(0, 0, "<ROOT>");
  currentExpr = root;
  currentBlock = 0;
  currentToken = 0;
  lastStart = 0;
- running = true;
- stayNextStep = false;
- int32_t lineNumber = 1;
- inputByte = 0;
- index = 0;
- while ((!input.end() || stayNextStep) && running && ba.ok)
- {
-  if (!stayNextStep)
-  {
-   index ++;
-   inputByte = input.readByte();
-   buffer[index % BUFFER_SIZE] = inputByte;
-   if (inputByte == '\n') lineNumber++;
-  }
-  else
-  {
-   stayNextStep = false;
-  }
-  std::cout<<("[ ")<<((char)(inputByte))<<(" ]")<<std::endl;
-  running = ba.step(inputByte);
- }
- if (!stayNextStep) index++;
+ ba.run(input);
  ba.step((uint8_t)' '); // ended cleanly: last white space
  if (currentBlock != 0)
  {
   std::cout<<("closing parenthesis missing at the end")<<std::endl;
   ba.ok = false;
  }
- if (!running || !(ba.ok))
+ if (!ba.ok)
  {
-  std::cout<<("ERROR: parser state [")<<(ba.stateNames[(int32_t)ba.currentState])<<("]")<<std::endl;
-  std::cout<<("Line ")<<(lineNumber)<<(": \"");
-  // print nearby code
-  int32_t start = index-1;
-  while (start > 0 && index - start < BUFFER_SIZE && (char)buffer[start % BUFFER_SIZE] != '\n')
-  {
-   start --;
-  }
-  while (++start <= index)
-  {
-   vrbout()<<((char)(buffer[start % BUFFER_SIZE]));
-  }
-  std::cout<<("\"")<<std::endl;
+  ba.printError();
   { delete root; root = 0; };
   return 0;
  }
@@ -277,6 +293,23 @@ MNode* MicroLexer::lex (std::string s)
 {
  MInputArray input = MInputArray(s);
  return lexInput(input);
+}
+void MicroLexer::printTitle (std::string s)
+{
+ std::cout<<("\n    ByteAutomata (c) 2020, Meanwhale")<<std::endl;
+ std::cout<<("    https://github.com/Meanwhale/ByteAutomata\n")<<std::endl;
+}
+void MicroLexer::printArgInfo ()
+{
+ std::cout<<("Command line arguments:")<<std::endl;
+ std::cout<<("    [cmd] -i            read standard input, eg. [cmd] -i < ../test_script.txt")<<std::endl;
+ std::cout<<("    [cmd] -t            run default test")<<std::endl;
+ std::cout<<("    [cmd] \"[string]\"    parse [string]")<<std::endl;
+}
+void MicroLexer::printStdinInfo ()
+{
+ std::cout<<("Hit Ctrl-Z (Windows) or ^D (Linux/Mac) at the start of a line and press enter to finish.")<<std::endl;
+ std::cout<<("Read from standard input...")<<std::endl;
 }
 MNode::MNode (MNode* _parent, int32_t _type, const std::string & _data)
   : data(_data)

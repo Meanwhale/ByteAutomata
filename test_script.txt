@@ -1,0 +1,20 @@
+algorithm quicksort(A, lo, hi) {
+	if (lo lessThan hi) {
+		p (partition(A, lo, hi))
+		quicksort(A, lo, p minus 1)
+		quicksort(A, p plus 1, hi)
+	}
+}
+
+algorithm partition(A, lo, hi) {
+	pivot (A[hi])
+	i (lo)
+	for (j(lo) to hi) {
+		if (A[j] lessThan pivot) {
+			swap (A[i], A[j])
+			i (i plus 1)
+		}
+	}
+	swap (A[i], A[hi])
+	return i
+}

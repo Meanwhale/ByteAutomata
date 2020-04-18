@@ -1,15 +1,23 @@
-/*
- *
- *    Meanscript ByteAutomata (c) 2020, Meanwhale
- *
- *    GitHub page:     https://github.com/Meanwhale/ByteAutomata
- *    Email:           meanwhale@gmail.com
- *    Twitter:         https://twitter.com/TheMeanwhale
- *
- */
 package net.meanscript.core;
 import net.meanscript.java.*;
 import net.meanscript.*;
+/*
+
+ *
+
+ *    Meanscript ByteAutomata (c) 2020, Meanwhale
+
+ *
+
+ *    GitHub page:     https://github.com/Meanwhale/ByteAutomata
+
+ *    Email:           meanwhale@gmail.com
+
+ *    Twitter:         https://twitter.com/TheMeanwhale
+
+ *
+
+ */
 public class MNode {
  int type;
  int numChildren;

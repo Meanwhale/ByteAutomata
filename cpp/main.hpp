@@ -1,5 +1,10 @@
 #ifndef BYTECODE_MAIN
 #define BYTECODE_MAIN
+
+#ifdef ALLOC_COUNTER
+#include "alloc_counter.h"
+#endif
+
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -19,7 +24,7 @@ namespace meanscript
 #define STR(x) #x
 #define ASSERT(x,msg) { if (!(x)) { printf("FAIL: (%s), file %s, line %d.\n", STR(x), __FILE__, __LINE__); std::cout<<msg<<std::endl; HALT; }}
 #define EXIT(msg) {std::cout<<"ERROR:"<<std::endl<<msg<<std::endl;std::exit(0);}
-#include "Array.h"
+#include "array.h"
 #include "src/ByteAutomata.h"
 #include "src/MicroLexer.h"
 #include "src/MInputStream.h"
