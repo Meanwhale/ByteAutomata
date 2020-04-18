@@ -3,34 +3,93 @@
 _**Tools for programming code processing**_
 
 
-ByteAutomata is a technique to implement a hard-coded finite-state machine for text code tokenizing.
+ByteAutomata provides tools to implement a hard-coded finite-state machine for text code tokenizing.
 This project includes an example program that takes a text and outputs a token tree.
 
-It's developed as a part of Meanscript, a multi-platform scripting and bytecode language.
+It's developed as a part of Meanscript, a work-in-progress multi-platform scripting and bytecode language.
 
 ## Compile and run
 
+You can input a text code (see code syntax below) to the example program and see a resulting token tree printed,
+if there's not any errors.
+
+### Languages
 Execute the example program to see guide for command line arguments.
+<ul>
+<li>Java
 
-### Java
-
-Go to folder 'java'. Compile classes and run the main class at ByteAutomataJava: 
+Go to folder _java_. Compile classes and run the main class _ByteAutomataJava_: 
 ```
     javac ByteAutomataJava.java
     java ByteAutomataJava
 ```
-### C++
+<li>C++
 
 You need GCC (https://gcc.gnu.org/) to compile.
-Go to folder 'cpp'. Compile and run 'byteautomata' (.exe):
+Go to folder _cpp_. Compile and run _byteautomata_ (.exe):
 ```
     g++ -std=gnu++11 main.cpp src/code.cpp -o byteautomata
     byteautomata
 ```
+</ul>
+
+### Input Code Syntax
+
+The example program recognizes simple C-like code containing
+<ul>
+	<li> <b>text</b> characters a-z and A-Z (no numbers or underscore) </li>
+	<li> <b>number</b> : characters 0-9 </li>
+	<li> <b>code blocks</b> starting with ([{ and ending with )]} respectively </li>
+	<li> <b>expression breaks</b>: comma and semicolon </li>
+	<li> <b>white space</b>: space, linebreak, and tab </li>
+</ul>
+
+The syntax is defined in class MicroLexer in source code.
+For example input
+
+```
+abc 123; foo (456, bar[i])
+```
+
+results this token tree:
+  
+```
+[<ROOT>]             // expression, token tree root
+  [abc]              // text token
+  [123]              // number token
+[<EXPR>]             // expression
+  [foo]
+  [<BLOCK>]          // code block root
+    [<EXPR>]
+      [456]
+    [<EXPR>]
+      [bar]
+      [<BLOCK>]
+        [<EXPR>]
+          [i]
+```
+
+## Project content
+
+Project code is generated from base code, written in C-like languages and macros (not included to the oriject for now).
+Base code is run thru GCC preprocessor to target languages, which are currently C++ and Java.
+
+### Folder structure
+
+| folder | content |
+|-|-|
+| / | root folder: README, LICENCE, and an example script file. |
+| /cpp | main source file, header, and utils |
+| /cpp/src | generated source code and header files |
+| /java/ | main source class|
+| /java/net/meanscript/ | generated code: classes for public interface |
+| /java/net/meanscript/core/ | generated code: internal classes |
+| /java/net/meanscript/java/ | Java-specific code |
+
 
 ## How It Works
 
-ByteAutomata has a (logiacally) two-dimensional byte array, which has a column for each byte (256) and for each state.
+ByteAutomata has a (logically) two-dimensional byte array, which has a column for each byte (256) and for each state.
 For example a simple state machine (https://en.wikipedia.org/wiki/Finite-state_machine) in ASCII art:
 ```
                         (0-9)                 (a-z)
@@ -55,7 +114,7 @@ ByteAutomata's byte array describes similar state machine like this:
 ```
     transition(state, inputBytes, callback);
 ```
-For example,to transition from 'white space' to 'number' state, call
+For example, define transition from 'white space' to 'number' state when input is a number character, call
 ```
     transition(whiteSpaceState, "0123456789", () -> {nextState(numberState);});
 ```
