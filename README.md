@@ -1,24 +1,24 @@
 # ByteAutomata
 
-_**Tools for programming code processing**_
+_**Language recognition for parsing**_
 
-
-ByteAutomata provides tools to implement a hard-coded finite-state machine for text code tokenizing.
-This project includes an example program that takes a text and outputs a token tree.
+ByteAutomata provides a method to implement a hard-coded finite-state machine for text code tokenizing.
+This project includes an example program that turns input code to a token tree.
 
 It's developed as a part of Meanscript, a work-in-progress multi-platform scripting and bytecode language.
 
 ## Compile and run
 
+Compile the example program in Java and/or C++.
 You can input a text code (see code syntax below) to the example program and see a resulting token tree printed,
-if there's not any errors.
+if there isn't any errors.
 
 ### Languages
 Execute the example program to see guide for command line arguments.
 <ul>
 <li>Java
 
-Go to folder _java_. Compile classes and run the main class _ByteAutomataJava_: 
+You need JDK 8 to compile and run. Go to folder _java_. Compile classes and run the main class _ByteAutomataJava_: 
 ```
     javac ByteAutomataJava.java
     java ByteAutomataJava
@@ -71,7 +71,7 @@ results this token tree:
 
 ## Project content
 
-Project code is generated from base code, written in C-like languages and macros (not included to the oriject for now).
+Project code is generated from base code, written in C-like languages and macros (not included to the project for now).
 Base code is run thru GCC preprocessor to target languages, which are currently C++ and Java.
 
 ### Folder structure
@@ -80,8 +80,8 @@ Base code is run thru GCC preprocessor to target languages, which are currently 
 |-|-|
 | / | root folder: README, LICENCE, and an example script file. |
 | /cpp | main source file, header, and utils |
-| /cpp/src | generated source code and header files |
-| /java/ | main source class|
+| /cpp/src | generated source (`code.cpp`) code and header files |
+| /java/ | main class source |
 | /java/net/meanscript/ | generated code: classes for public interface |
 | /java/net/meanscript/core/ | generated code: internal classes |
 | /java/net/meanscript/java/ | Java-specific code |
@@ -89,7 +89,7 @@ Base code is run thru GCC preprocessor to target languages, which are currently 
 
 ## How It Works
 
-ByteAutomata has a (logically) two-dimensional byte array, which has a column for each byte (256) and for each state.
+ByteAutomata has a (logically) two-dimensional byte array, which has a column for each byte (256) and a row for each state.
 For example a simple state machine (https://en.wikipedia.org/wiki/Finite-state_machine) in ASCII art:
 ```
                         (0-9)                 (a-z)
@@ -102,28 +102,33 @@ For example a simple state machine (https://en.wikipedia.org/wiki/Finite-state_m
 
 ```
 [X] marks an error state.
-ByteAutomata's byte array describes similar state machine like this:
+ByteAutomata's byte array describes similar state machine. Array items are indexes of transition callbacks:
 ```
                              0 ... {space} ... ' 0' '1' '2' ... '9' .... 'a' ... 'z'
 			     
-    state 1: white space              0          2   2   2  ...  2        3  ...  3
-    state 2: number                   1          0   0   0       0       [X] ... [X]
-    state 3: text                     1         [X] [X] [X]     [X]       0  ...  0
+    state 1: white space              0          a   a   a  ...  a        b  ...  b
+    state 2: number                   c          0   0   0       0       [X] ... [X]
+    state 3: text                     d         [X] [X] [X]     [X]       0  ...  0
+    
+    callback a: nextState(number)
+    callback b: nextState(text)
+    callback c: addNumberToken(), nextState(white space)
+    callback d: addTextToken(), nextState(white space)
 ```
-`[X]` is some error code, like 255 (`0xff`). All bytes are `[X]` by default. State transitions are defined for ByteAutomata by calling
+`[X]` is an error code `0xff` (255), and `0` is for staying on the same state without a callback call. All bytes are `[X]` by default. State transitions are created for ByteAutomata by calling
 ```
     transition(state, inputBytes, callback);
 ```
-For example, define transition from 'white space' to 'number' state when input is a number character, call
+For example, to define a transition from 'white space' to 'number' state when input is a number character, call
 ```
-    transition(whiteSpaceState, "0123456789", () -> {nextState(numberState);});
+    transition(whiteSpaceState, "0123456789", () -> { nextState(numberState); } );
 ```
 in pseudo-Java.
 
 To create a token tree, add nodes to the tree on transitions.
 For example, in 'number' state, when we get a space byte as an input, we can add a number token:
 ```
-    transition(numberState, " ", () -> {addToken(startIndex, currentIndex); nextState(whiteSpaceState);});
+    transition(numberState, " ", () -> {addNumberToken(startIndex, currentIndex); nextState(whiteSpaceState);});
 ```
 So, if input is "abc 123 de", status at the end of "123" is like
 ```
@@ -133,6 +138,24 @@ So, if input is "abc 123 de", status at the end of "123" is like
     input     a b c   1 2 3   d e
 ```
 Then `addToken(4, 6)` is called. It copies the number characters [4], [5], and [6] from input buffer, save them to a new node, and add the node to the token tree.
+
+You can iterate thru the node tree nodes using class `NodeIterator` or directly class `MNode`.
+For example printing all nodes with a recursive function, in pseudo-Java:
+
+```
+void printTree (MNode node)
+{
+    print(node.data);
+    if (node.child != null) printTree(node.child);
+    if (node.next != null) printTree(node.next);
+}
+
+// ...
+
+    printTree(rootNode);
+```
+
+You'll find the full version of the function in class `MNode`.
 
 <hr>
 Copyright (c) 2020, Meanwhale
