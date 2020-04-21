@@ -4,16 +4,16 @@ _**Language recognition for parsing**_
 
 ByteAutomata provides a method to implement a hard-coded finite-state machine for text code tokenizing.
 This project includes an example program that turns input code to a token tree.
+It can be used as a template for your own parser.
 
 It's developed as a part of Meanscript, a work-in-progress multi-platform scripting and bytecode language.
 
 ## Compile and run
 
 Compile the example program in Java and/or C++.
-You can input a text code (see code syntax below) to the example program and see a resulting token tree printed,
+You can give a code (see the syntax below) to the example program and see a resulting token tree printed,
 if there isn't any errors.
 
-### Languages
 Execute the example program to see guide for command line arguments.
 <ul>
 <li>Java
@@ -71,17 +71,19 @@ results this token tree:
 
 ## Project content
 
-Project code is generated from base code, written in C-like languages and macros (not included to the project for now).
-Base code is run thru GCC preprocessor to target languages, which are currently C++ and Java.
+Project code is generated from base code, written in C-like language and macros (not included to this repository for now).
+Base code is run thru GCC preprocessor for target languages, which are currently C++ and Java.
+The most essential classes are **ByteAutomata**, a general use state machine, and **MicroLexer**, an example implementation.
+
 
 ### Folder structure
 
 | folder | content |
 |-|-|
 | / | root folder: README, LICENCE, and an example script file. |
-| /cpp | main source file, header, and utils |
-| /cpp/src | generated source (`code.cpp`) code and header files |
-| /java/ | main class source |
+| /cpp/ | main() source file, header, and utils |
+| /cpp/src/ | generated source (`code.cpp`) code and header files |
+| /java/ | main() class source |
 | /java/net/meanscript/ | generated code: classes for public interface |
 | /java/net/meanscript/core/ | generated code: internal classes |
 | /java/net/meanscript/java/ | Java-specific code |
@@ -89,8 +91,8 @@ Base code is run thru GCC preprocessor to target languages, which are currently 
 
 ## How It Works
 
-ByteAutomata has a (logically) two-dimensional byte array, which has a column for each byte (256) and a row for each state.
-For example a simple state machine (https://en.wikipedia.org/wiki/Finite-state_machine) in ASCII art:
+ByteAutomata has a (logically) two-dimensional byte array, which has a column for each input byte (256) and a row for each state.
+For example here's a simple state machine (https://en.wikipedia.org/wiki/Finite-state_machine), that recognizes text and numbers separated with white space (eg. `abc 123 ef`), drawn in ASCII art:
 ```
                         (0-9)                 (a-z)
 	            ---------- [white space] ----------
@@ -101,12 +103,12 @@ For example a simple state machine (https://en.wikipedia.org/wiki/Finite-state_m
                  (0-9)                               (a-z)
 
 ```
-[X] marks an error state.
-ByteAutomata's byte array describes similar state machine. Array items are indexes of transition callbacks:
+States are denote with square brackets and [X] marks an error state.
+Here's how it's done in ByteAutomata's byte array, where array items are indexes of transition callbacks:
 ```
                              0 ... {space} ... ' 0' '1' '2' ... '9' .... 'a' ... 'z'
 			     
-    state 1: white space              0          a   a   a  ...  a        b  ...  b
+    state 1: white space              0          a   a   a  ...  a        b ...  _b_
     state 2: number                   c          0   0   0       0       [X] ... [X]
     state 3: text                     d         [X] [X] [X]     [X]       0  ...  0
     
@@ -115,15 +117,17 @@ ByteAutomata's byte array describes similar state machine. Array items are index
     callback c: addNumberToken(), nextState(white space)
     callback d: addTextToken(), nextState(white space)
 ```
-`[X]` is an error code `0xff` (255), and `0` is for staying on the same state without a callback call. All bytes are `[X]` by default. State transitions are created for ByteAutomata by calling
+For example, if we're in 'white space' state, and input byte is 'z', then callback 'b' is called (the array item for this is surrounded with underscores).
+`[X]` is an error code `0xff` (255), and `0` is for staying on the same state without a callback call. All bytes are `[X]` by default. 
+
+State transitions are created for ByteAutomata by calling
 ```
     transition(state, inputBytes, callback);
 ```
-For example, to define a transition from 'white space' to 'number' state when input is a number character, call
+For example, to define a transition from 'white space' to 'number' state when input is a number character, call (in pseudo-Java)
 ```
     transition(whiteSpaceState, "0123456789", () -> { nextState(numberState); } );
 ```
-in pseudo-Java.
 
 To create a token tree, add nodes to the tree on transitions.
 For example, in 'number' state, when we get a space byte as an input, we can add a number token:
@@ -139,6 +143,7 @@ So, if input is "abc 123 de", status at the end of "123" is like
 ```
 Then `addToken(4, 6)` is called. It copies the number characters [4], [5], and [6] from input buffer, save them to a new node, and add the node to the token tree.
 
+Token tree is made of `MNode`s whose member are references/pointers to the next sibling and a child node, and token data.
 You can iterate thru the node tree nodes using class `NodeIterator` or directly class `MNode`.
 For example printing all nodes with a recursive function, in pseudo-Java:
 
