@@ -92,18 +92,10 @@ The most essential classes are **ByteAutomata**, a general use state machine, an
 ## How It Works
 
 ByteAutomata has a (logically) two-dimensional byte array, which has a column for each input byte (256) and a row for each state.
-For example here's a simple state machine (https://en.wikipedia.org/wiki/Finite-state_machine), that recognizes text and numbers separated with white space (eg. `abc 123 ef`), drawn in ASCII art:
-```
-                        (0-9)                 (a-z)
-	            ---------- [white space] ----------
-		   |             ^       ^             |
-         (a-z)     v             |       |             v    (0-9)
-    [X] <----- [number]-----------       ------------[text] -----> [X]
-                  v ^      {space}         {space}    v ^
-                 (0-9)                               (a-z)
+For example here's a simple state machine (https://en.wikipedia.org/wiki/Finite-state_machine), that recognizes text and numbers separated with white space, eg. `abc 123 ef`:
 
-```
-States are denote with square brackets and [X] marks an error state.
+![alt text](https://github.com/Meanwhale/ByteAutomata/blob/master/simple_automata.png "Simple automata")
+
 Here's how it's done in ByteAutomata's byte array, where array items are indexes of transition callbacks:
 ```
                              0 ... {space} ... ' 0' '1' '2' ... '9' .... 'a' ... 'z'
