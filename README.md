@@ -5,7 +5,9 @@ _**Language recognition for parsing**_
 
 ByteAutomata provides a method to implement a hard-coded finite-state machine for text code tokenizing.
 This project includes an example program that turns input code to a token tree.
-It can be used as a template for your own parser.
+It can be used as a template for your own parser. Here's the C++ code that defines state machine for the example syntax:
+
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ![alt text](https://github.com/Meanwhale/ByteAutomata/blob/master/transition_definitions.png "Code")
 
 It's developed as a part of Meanscript, a work-in-progress multi-platform scripting and bytecode language.
 
