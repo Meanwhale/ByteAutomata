@@ -394,3 +394,4 @@ www-test/
 war/meanscriptdemo/
 .symbolMap
 .cache.js
+/cpp/byteautomata

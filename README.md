@@ -26,10 +26,13 @@ You need JDK 8 to compile and run. Go to folder _java_. Compile classes and run 
 <li>C++
 
 You need GCC (https://gcc.gnu.org/) to compile.
-Go to folder _cpp_. Compile and run _byteautomata_ (.exe):
+Go to folder _cpp_. Call `make` to complile or use command
 ```
-    g++ -std=gnu++11 main.cpp src/code.cpp -o byteautomata
-    byteautomata
+    g++ -std=c++14 main.cpp src/code.cpp -o byteautomata
+```
+and then run _byteautomata_ (.exe):
+```
+    ./byteautomata
 ```
 </ul>
 
