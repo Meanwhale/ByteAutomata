@@ -136,7 +136,7 @@ public int getIndex ()
 {
  return index;
 }
-public int getInputByte ()
+public byte getInputByte ()
 {
  return inputByte;
 }

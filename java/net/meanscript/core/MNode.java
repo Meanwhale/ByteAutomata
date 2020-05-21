@@ -48,5 +48,5 @@ public void printTree (MNode _node, int depth, boolean deep) throws MException
  if (node.child != null && deep) printTree(node.child, depth + 1, deep);
  if (node.next != null) printTree(node.next, depth, deep);
 }
-;
+
 }

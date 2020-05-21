@@ -31,7 +31,7 @@ void printError();
 std::string getString(int32_t,int32_t);
 bool step(uint8_t input);
 int32_t getIndex();
-int32_t getInputByte();
+uint8_t getInputByte();
 void run(MInputStream & input);
 ~ByteAutomata();
 };

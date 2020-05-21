@@ -101,7 +101,7 @@ int32_t ByteAutomata::getIndex ()
 {
  return index;
 }
-int32_t ByteAutomata::getInputByte ()
+uint8_t ByteAutomata::getInputByte ()
 {
  return inputByte;
 }
@@ -165,11 +165,17 @@ void ByteAutomata::printError ()
 }
 const char * letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const char * numbers = "1234567890";
-const char * whitestateSpace = " \t\n\r";
+const char * whiteSpace = " \t\n\r";
 const char * linebreak = "\n\r";
 const char * expressionBreak = ",;";
 const char * blockStart = "([{";
 const char * blockEnd = ")]}";
+constexpr int32_t NODE_EXPR = 101;
+constexpr int32_t NODE_PARENTHESIS = 102;
+constexpr int32_t NODE_SQUARE_BRACKETS = 103;
+constexpr int32_t NODE_CURLY_BRACKETS = 104;
+constexpr int32_t NODE_TEXT = 105;
+constexpr int32_t NODE_NUMBER = 106;
 uint8_t stateSpace, stateName, stateNumber;
 ByteAutomata* automata;
 int32_t lastStart;
@@ -189,7 +195,7 @@ void stay()
 }
 void addExpr()
 {
- MNode* expr = new MNode(currentBlock, 0, "<EXPR>");
+ MNode* expr = new MNode(currentBlock, NODE_EXPR, "<EXPR>");
  (*currentExpr).next = expr;
  currentExpr = expr;
  currentToken = 0;
@@ -211,9 +217,14 @@ void exprBreak()
  lastStart = -1;
  addExpr();
 }
-void addBlock(int32_t blockType)
+void addBlock()
 {
- vrbout()<<("add block: ")<<(blockType)<<std::endl;
+ uint8_t inputByte = (*automata).getInputByte();
+ int32_t blockType = 0;
+ if (inputByte == '(') blockType = NODE_PARENTHESIS;
+ else if (inputByte == '[') blockType = NODE_SQUARE_BRACKETS;
+ else if (inputByte == '{') blockType = NODE_CURLY_BRACKETS;
+ else { {if (!(false)) EXIT("unhandled block start: " << inputByte)}; }
  lastStart = -1;
  std::string tmp123("<BLOCK>");
  MNode* block = new MNode(currentExpr, blockType, tmp123);
@@ -226,15 +237,16 @@ void addBlock(int32_t blockType)
  currentExpr = expr;
  currentToken = 0;
 }
-void endBlock(int32_t blockType)
+void endBlock()
 {
  {if (!((currentBlock != 0))) EXIT("unexpected block end")};
+ uint8_t inputByte = (*automata).getInputByte();
  // Check that block-end character is the right one.
  // The 'type' is block start/end character's ASCII code.
- if ((*currentBlock).type == 40 ) {{if (!(blockType == 41)) EXIT("invalid block end; parenthesis was expected")};}
- else if ((*currentBlock).type == 91 ) {{if (!(blockType == 93)) EXIT("invalid block end; square bracket was expected")};}
- else if ((*currentBlock).type == 123) {{if (!(blockType == 125)) EXIT("invalid block end; curly bracket was expected")};}
- else { {if (!(false)) EXIT("unhandled block end: " << blockType)}; }
+ if ((*currentBlock).type == NODE_PARENTHESIS ) { {if (!(inputByte == ')')) EXIT("invalid block end; parenthesis was expected")};}
+ else if ((*currentBlock).type == NODE_SQUARE_BRACKETS ) { {if (!(inputByte == ']')) EXIT("invalid block end; square bracket was expected")};}
+ else if ((*currentBlock).type == NODE_CURLY_BRACKETS ) { {if (!(inputByte == '}')) EXIT("invalid block end; curly bracket was expected")};}
+ else { {if (!(false)) EXIT("unhandled block end: " << inputByte)}; }
  lastStart = -1;
  currentToken = currentBlock;
  currentExpr = (*currentToken).parent;
@@ -245,22 +257,22 @@ void defineTransitions(ByteAutomata & ba)
  stateSpace = ba.addState("space");
  stateName = ba.addState("name");
  stateNumber = ba.addState("number");
- ba.transition(stateSpace, whitestateSpace, 0);
+ ba.transition(stateSpace, whiteSpace, 0);
  ba.transition(stateSpace, letters, []() { next(stateName); });
  ba.transition(stateSpace, numbers, []() { next(stateNumber); });
  ba.transition(stateSpace, expressionBreak, []() { exprBreak(); });
- ba.transition(stateSpace, blockStart, []() { addBlock((int)(*automata).getInputByte());});
- ba.transition(stateSpace, blockEnd, []() { endBlock((int)(*automata).getInputByte());});
+ ba.transition(stateSpace, blockStart, []() { addBlock();});
+ ba.transition(stateSpace, blockEnd, []() { endBlock();});
  ba.transition(stateName, letters, 0);
- ba.transition(stateName, whitestateSpace, []() { addToken(0); next(stateSpace); });
- ba.transition(stateName, blockStart, []() { addToken(0); stay(); next(stateSpace); });
- ba.transition(stateName, blockEnd, []() { addToken(0); stay(); next(stateSpace); });
- ba.transition(stateName, expressionBreak, []() { addToken(0); exprBreak(); next(stateSpace); });
+ ba.transition(stateName, whiteSpace, []() { addToken(NODE_TEXT); next(stateSpace); });
+ ba.transition(stateName, blockStart, []() { addToken(NODE_TEXT); stay(); next(stateSpace); });
+ ba.transition(stateName, blockEnd, []() { addToken(NODE_TEXT); stay(); next(stateSpace); });
+ ba.transition(stateName, expressionBreak, []() { addToken(NODE_TEXT); exprBreak(); next(stateSpace); });
  ba.transition(stateNumber, numbers, 0);
- ba.transition(stateNumber, whitestateSpace, []() { addToken(0); next(stateSpace); });
- ba.transition(stateNumber, blockStart, []() { addToken(0); stay(); next(stateSpace); });
- ba.transition(stateNumber, blockEnd, []() { addToken(0); stay(); next(stateSpace); });
- ba.transition(stateNumber, expressionBreak, []() { addToken(0); exprBreak(); next(stateSpace); });
+ ba.transition(stateNumber, whiteSpace, []() { addToken(NODE_NUMBER); next(stateSpace); });
+ ba.transition(stateNumber, blockStart, []() { addToken(NODE_NUMBER); stay(); next(stateSpace); });
+ ba.transition(stateNumber, blockEnd, []() { addToken(NODE_NUMBER); stay(); next(stateSpace); });
+ ba.transition(stateNumber, expressionBreak, []() { addToken(NODE_NUMBER); exprBreak(); next(stateSpace); });
 }
 MNode* lexInput(MInputStream & input)
 {
@@ -334,7 +346,7 @@ void MNode::printTree (MNode* _node, int32_t depth, bool deep)
  if (node.child != 0 && deep) printTree(node.child, depth + 1, deep);
  if (node.next != 0) printTree(node.next, depth, deep);
 }
-MNode::~MNode() { delete next; delete child; };
+MNode::~MNode() { delete next; delete child; }
 NodeIterator::NodeIterator (MNode* _node)
 {
  node = _node;
@@ -417,10 +429,10 @@ int32_t MInputStream::readInt ()
  // bytes:	b[0] b[1] b[2] b[3] b[4] b[5] b[6] b[7]   ...
  // ints:	_________i[0]______|_________i[1]______|_ ...
  int32_t i = 0;
- i |= (readByte() << 24) & 0xff000000;
- i |= (readByte() << 16) & 0x00ff0000;
- i |= (readByte() << 8) & 0x0000ff00;
- i |= (readByte()) & 0x000000ff;
+ i |= (int32_t)((readByte() << 24) & 0xff000000);
+ i |= (int32_t)((readByte() << 16) & 0x00ff0000);
+ i |= (int32_t)((readByte() << 8) & 0x0000ff00);
+ i |= (int32_t)((readByte()) & 0x000000ff);
  return i;
 }
 void MInputStream::readArray (Array<int> & trg, int32_t numInts)
