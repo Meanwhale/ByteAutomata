@@ -1,6 +1,6 @@
 # ByteAutomata
 
-_**Language recognition for parsing**_
+_**Language recognition for parsing. Works in Java, C++, and C#.**_
 
 
 ByteAutomata provides a method to implement a hard-coded finite-state machine for text code tokenizing.
@@ -18,7 +18,7 @@ meanwhale@gmail.com
 
 ## Compile and run
 
-Compile the example program in Java and/or C++.
+Compile the example program in Java, C++, and/or C#.
 You can give a code (see the syntax below) to the example program and see a resulting token tree printed,
 if there isn't any errors.
 
@@ -42,6 +42,21 @@ and then run _byteautomata_ (.exe):
 ```
     ./byteautomata
 ```
+
+<li>C#
+	
+Compile
+	
+```
+    csc MeanCS.cs ByteAutomata.cs src\code.cs
+```
+
+and run
+
+```
+    ByteAutomata.exe
+```
+
 </ul>
 
 ### Input Code Syntax
@@ -83,7 +98,7 @@ results this token tree:
 ## Project content
 
 Project code is generated from base code, written in C-like language and macros (not included to this repository for now).
-Base code is run thru GCC preprocessor for target languages, which are currently C++ and Java.
+Base code is run thru GCC preprocessor for target languages, which are currently C++, C#, and Java.
 The most essential classes are **ByteAutomata**, a general use state machine, and **MicroLexer**, an example implementation.
 
 
@@ -94,6 +109,8 @@ The most essential classes are **ByteAutomata**, a general use state machine, an
 | / | root folder: README, LICENCE, and an example script file. |
 | /cpp/ | main() source file, header, and utils |
 | /cpp/src/ | generated source (`code.cpp`) code and header files |
+| /csharp/ | Main() source file and utils |
+| /csharp/src/ | generated source code (`code.cs`) |
 | /java/ | main() class source |
 | /java/net/meanscript/ | generated code: classes for public interface |
 | /java/net/meanscript/core/ | generated code: internal classes |
