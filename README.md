@@ -9,14 +9,7 @@ It can be used as a template for your own parser. Here's the C++ code that defin
 
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ![alt text](https://github.com/Meanwhale/ByteAutomata/blob/master/transition_definitions.png "Code")
 
-It's developed as a part of Meanscript, a work-in-progress multi-platform scripting and bytecode language:
-
-https://github.com/Meanwhale/MeanscriptCLI
-
-If you have any questions, comments, ideas, etc. contact me:
-
-https://twitter.com/TheMeanwhale<br>
-meanwhale@gmail.com
+My web page: https://meanwhale.github.io/
 
 ## Compile and run
 
